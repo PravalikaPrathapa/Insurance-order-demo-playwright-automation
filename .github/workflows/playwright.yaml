@@ -1,0 +1,93 @@
+name: Playwright - Insurance Order Entry
+
+# DESIGN NOTE (lab limitation, agreed with mentor in Q-13):
+# The application runs on your lab VM (http://136.83.129.92:8081). A GitHub-hosted runner cannot reach a lab VM, so:
+#   * "static-checks" runs on GitHub-hosted runners for every push / pull request (JavaScript syntax + suite tags, no app needed).
+#   * "tests" needs a SELF-HOSTED runner installed on the lab VM (label: lab-vm) and is started MANUALLY (workflow_dispatch)
+#     or by the nightly schedule once such a runner exists. Without that runner the job simply waits in the queue.
+# Repository secrets required for "tests": INSURANCE_BASE_URL, INSURANCE_API_KEY, INSURANCE_PASSWORD, LEARNER_USER
+# (optional: DISPOSABLE_USER for the destructive lockout test).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: 'Which tests to run'
+        type: choice
+        default: smoke
+        options: [smoke, regression, api, e2e, p1, all]
+      browsers:
+        description: 'Comma separated: chromium, firefox, webkit'
+        default: chromium
+  schedule:
+    - cron: '30 20 * * 1-5' # weekdays 20:30 UTC (regression), only useful with a self-hosted runner
+
+jobs:
+  static-checks:
+    name: JavaScript checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      - name: Check JavaScript syntax
+        run: npm run check:javascript
+      - name: Validate suite case and tag counts
+        run: npm run traceability
+
+  tests:
+    name: Playwright tests (lab VM runner)
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    needs: static-checks
+    runs-on: [self-hosted, lab-vm]
+    timeout-minutes: 90
+    env:
+      CI: 'true'
+      INSURANCE_BASE_URL: ${{ secrets.INSURANCE_BASE_URL }}
+      INSURANCE_API_KEY: ${{ secrets.INSURANCE_API_KEY }}
+      INSURANCE_PASSWORD: ${{ secrets.INSURANCE_PASSWORD }}
+      LEARNER_USER: ${{ secrets.LEARNER_USER }}
+      DISPOSABLE_USER: ${{ secrets.DISPOSABLE_USER }}
+      BROWSERS: ${{ github.event.inputs.browsers || 'chromium' }}
+      WORKERS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Pick the suite
+        id: pick
+        run: |
+          case "${{ github.event.inputs.suite || 'regression' }}" in
+            smoke)      echo "grep=@smoke" >> "$GITHUB_OUTPUT" ;;
+            regression) echo "grep=@regression" >> "$GITHUB_OUTPUT" ;;
+            api)        echo "grep=@api" >> "$GITHUB_OUTPUT" ;;
+            e2e)        echo "grep=@e2e" >> "$GITHUB_OUTPUT" ;;
+            p1)         echo "grep=@P1" >> "$GITHUB_OUTPUT" ;;
+            *)          echo "grep=." >> "$GITHUB_OUTPUT" ;;
+          esac
+      - name: Run tests
+        run: npx playwright test --grep "${{ steps.pick.outputs.grep }}"
+      - name: Upload report, traces, screenshots and videos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-evidence-${{ github.run_id }}
+          path: |
+            reports/html
+            reports/test-results
+            reports/junit.xml
+            reports/results.json
+          retention-days: 30
+      # Release decision: a failing P1 test classified as an APPLICATION defect is release-blocking.
+      # The job fails when any test fails; classify each failure (see README) before treating it as a defect.

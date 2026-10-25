@@ -1,0 +1,29 @@
+{
+  "name": "insurance-order-entry-playwright-automation",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright + JavaScript QA automation for the Insurance Order Entry Demo (Whole Life)",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "check:javascript": "node scripts/check-javascript.js",
+    "traceability": "node scripts/check-traceability.js",
+    "test": "playwright test",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:regression": "playwright test --grep @regression",
+    "test:api": "playwright test --grep @api",
+    "test:e2e": "playwright test --grep @e2e",
+    "test:auth": "playwright test tests/auth",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:p1": "playwright test --grep @P1",
+    "report": "playwright show-report reports/html",
+    "list": "playwright test --list"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^26.6.5",
+    "dotenv": "^16.4.5"
+  }
+}
