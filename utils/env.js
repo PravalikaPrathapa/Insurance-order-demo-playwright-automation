@@ -13,14 +13,14 @@ function required(name) {
 /** Central, lazy environment access. Nothing secret is hard-coded anywhere in the repo. */
 exports.env = {
     get baseUrl() {
-        return (process.env.INSURANCE_BASE_URL ?? 'http://136.83.129.92:8081/login').replace(/\/$/, '');
+        return (process.env.INSURANCE_BASE_URL ?? 'http://35.200.146.53:8081/login').replace(/\/$/, '');
     },
     /**
      * API base URL. It ALWAYS ends with a trailing slash and API paths used with it have NO leading slash,
      * otherwise Playwright's URL resolution drops the "/api" segment (lesson from the earlier FinServe project).
      */
     get apiBase() {
-        const raw = (process.env.INSURANCE_API_BASE_URL ?? `http://136.83.129.92:8081/api/`).replace(/\/+$/, '');
+        const raw = (process.env.INSURANCE_API_BASE_URL ?? `http://35.200.146.53:8081/api/`).replace(/\/+$/, '');
         return `${raw}/`;
     },
     get apiKey() {

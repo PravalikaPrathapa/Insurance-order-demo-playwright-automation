@@ -1,7 +1,7 @@
 name: Playwright - Insurance Order Entry
 
 # DESIGN NOTE (lab limitation, agreed with mentor in Q-13):
-# The application runs on your lab VM (http://136.83.129.92:8081). A GitHub-hosted runner cannot reach a lab VM, so:
+# The application runs on your lab VM (http://35.200.146.53:8081). A GitHub-hosted runner cannot reach a lab VM, so:
 #   * "static-checks" runs on GitHub-hosted runners for every push / pull request (JavaScript syntax + suite tags, no app needed).
 #   * "tests" needs a SELF-HOSTED runner installed on the lab VM (label: lab-vm) and is started MANUALLY (workflow_dispatch)
 #     or by the nightly schedule once such a runner exists. Without that runner the job simply waits in the queue.
